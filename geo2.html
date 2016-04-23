@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<!-- Exemplo de watchposition com mapa-->
+<html>
+    <head>
+        <meta charset="iso-8859"/>
+        <title>Sua posiçao em um mapa com os dados de Latitude e Longitude</title>
+        <!-- chamada à API do Google Maps-->
+        <script src="http://maps.google.com/maps/api/js?sensor=false"></script>
+
+        <script>
+            var watch_id;//variável que guardará a id do processo de watchPosition
+
+            // função successCallback para witchPosition
+            function fc_localizacao_ok(posicao)
+            {
+                // variáveis que receberão os dados de localização
+                var posLat = posicao.coords.latitude;
+                var posLng = posicao.coords.longitude;
+                var posPrecisao=posicao.coords.accuracy;
+                var dadosPrecisao='Precisão: ' + posPrecisao + 'm<br/>';
+                var div_precisao=document.getElementById("div_precisao_localizacao");
+                div_precisao.innerHTML =dadosPrecisao;
+                // cria um mapa com as coordenadas adquiridas
+                var minha_lat_long = new google.maps.LatLng(posLat, posLng);
+                // seta-se algumas opcões do mapa
+                var opcoes_mapa = {zoom: 14,center: minha_lat_long,
+                mapTypeId: google.maps.MapTypeId.ROADMAP}
+                // cria-se o mapa
+                var mapa = new google.maps.Map(document.getElementById('mapa'), opcoes_mapa);
+                //objeto que descobre o endereço por meio da latitude e longitude
+                var geocoder = new google.maps.Geocoder();
+                //objeto janela que mostrará a informação do local
+                var infowindow = new google.maps.InfoWindow();
+                //realizando a geocodificação: mostra rua através da latitude e longitude
+                geocoder.geocode({'latLng': minha_lat_long},
+                function(results, status){
+                    //se a geocoficação for realizada
+                    if (status == google.maps.GeocoderStatus.OK)
+                    {
+                     // verifica se há algum endereco
+                         if (results[0])
+                        {
+                             // adiciona-se um marcador a localização
+                            var marcador = new google.maps.Marker({
+                                position: minha_lat_long,
+                                map: mapa
+                            });
+                            // monta-se a mensagem do endereço a ser visualizado
+                            var end=results[0].formatted_address;
+                            var quebra_end=end.split(",");
+                            infowindow.setContent(quebra_end[0]+' '+quebra_end[1]+'<br/>'+quebra_end[2]);
+                            infowindow.open(mapa, marcador);
+                        }
+                    }
+                    else
+                    {
+                         //mensagem de erro caso falhe a codificação
+                        alert('Geocodificação falhou. Erro ' + status);
+                    }
+                });
+            }
+            // função de tratamento de erros retornanos por getCurrentPosition
+            function fc_erro_localizacao(erro)
+            {
+                // inicializa-se a mensagem de erro
+                var mensagemErro = 'ERRO: ';
+                // conforme o tipo de erro de erro.cod, mostrará a respectiva mensagem
+                switch(erro.code)
+                {
+                    case erro.PERMISSION_DENIED:
+                        mensagemErro += 'Usuário não compartilhou seus dados de geolocalização.';
+                        break;
+                    case erro.POSITION_UNAVAILABLE:
+                        mensagemErro += 'Não foi possível detectar a posição correta.';
+                        break;
+                    case erro.TIMEOUT:
+                        mensagemErro += 'Erro de demora para recuperação de posição.';
+                        break;
+                    default:
+                        mensagemErro += 'Erro desconhecido.';
+                        break;
+                }
+                // mostra os erro para o usuário
+                document.getElementById('div_localizacao').innerHTML = mensagemErro;
+            }
+             // funcao que para a busca de dados
+             function parar_watch() {
+                 // verifica se há uma id de localização
+                 if (watch_id != null) {
+
+                    // para a busca do local
+                     navigator.geolocation.clearWatch(watch_id);
+                     alert();
+                    // define o variavel watch_id como nula
+                     watch_id = null;
+
+                    // update our status
+                     document.getElementById('div_status').innerHTML = 'Busca Desligada';
+                 }
+             }
+            // função de busca do local do usuário. Acionada por clique do botão
+            function fc_buscar_mapa()
+            {
+                var div_status = document.getElementById('div_status');
+                // verifica o suporte a API de Geolocalização
+                if (navigator.geolocation)
+                {
+                    //defini-se uma variável para o terceiro método de watchPosition
+                    var opcoes={ enableHighAccuracy: true, /* liga-se o modo de alta
+                     precisão de dados */
+                    maximumAge:120000, /* defini-se o tempo máximo de
+                     permanência dos dados na memória cache
+                    do navegador. Para manter os dados por
+                    tempo indefinido deixar ' Infinity'*/
+                    timeout: 4000 /* tempo máximo em milisegundos de retorno
+                     função fc_localizacao_ok( ). Aqui 04 segundos */
+                    }
+                     // faz uma chamada de watchPosition e guarda o sua id em watch_id
+                    watch_id=navigator.geolocation.watchPosition(fc_localizacao_ok, fc_erro_localizacao,opcoes);
+                    // status da atualização
+                    div_status.innerHTML = 'Identificador da atualização: ' +watch_id;
+                }
+                else
+                {
+                    //mensagem caso a API de Geolocalização não seja suportada
+                    div_status_localizao.innerHTML = 'API de Geolocalização não suportada.';
+                }
+            }
+        </script>
+    </head>
+    <body>
+        <div id="container" style="width:500px;">
+        <div id="mapa" style="width:500px;height:300px;border-style:solid;border-width:2px;margin:
+        22px 0;"></div>
+        <!--botão para parar localização--><button id="parar_watch" onclick="parar_watch();">Parar</button>
+        <!--botão para parar reiniciar--><button id="reini_watch"
+        onclick="fc_buscar_mapa();">Reiniciar</button>
+        <div id="div_precisao_localizacao"></div>
+        <div id="div_status"></div>
+        </div>
+        <!-- faze-se a chamada a função após carregar todos os elementos da página -->
+        <script>fc_buscar_mapa();</script>
+    </body>
+</html>
+<!--Fonte: http://www.unigran.br/ciencias_exatas/conteudo/ed4/artigos/06.pdf-->
